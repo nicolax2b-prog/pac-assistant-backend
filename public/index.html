@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PAC Assistant</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>PAC Assistant</h1>
+  <div id="userBar" class="hidden">
+    <span id="userLabel"></span>
+    <button id="logoutBtn">Déconnexion</button>
+  </div>
+</header>
+
+<main>
+  <section id="authSection">
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="login">Connexion</button>
+      <button class="tab-btn" data-tab="register">Inscription</button>
+    </div>
+
+    <form id="loginForm" class="auth-form">
+      <label>Email <input type="email" id="loginEmail" required></label>
+      <label>Mot de passe <input type="password" id="loginPassword" required></label>
+      <button type="submit">Se connecter</button>
+      <p class="error" id="loginError"></p>
+    </form>
+
+    <form id="registerForm" class="auth-form hidden">
+      <label>Nom de l'exploitation <input type="text" id="registerNom"></label>
+      <label>Email <input type="email" id="registerEmail" required></label>
+      <label>Mot de passe (8 caractères min.) <input type="password" id="registerPassword" required minlength="8"></label>
+      <button type="submit">Créer le compte</button>
+      <p class="error" id="registerError"></p>
+    </form>
+  </section>
+
+  <section id="appSection" class="hidden">
+    <div class="card">
+      <h2>Parcelles</h2>
+      <table id="parcellesTable">
+        <thead>
+          <tr><th>Nom</th><th>Culture</th><th>Surface (ha)</th><th>Commune</th><th></th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <form id="parcelleForm">
+        <input type="hidden" id="parcelleId">
+        <label>Nom <input type="text" id="parcelleNom" required></label>
+        <label>Culture
+          <select id="parcelleCulture" required>
+            <option value="ble_tendre">Blé tendre</option>
+            <option value="ble_dur">Blé dur</option>
+            <option value="orge">Orge</option>
+            <option value="mais">Maïs</option>
+            <option value="vigne">Vigne (viticulture)</option>
+            <option value="olivier">Oliveraie</option>
+            <option value="agrumes">Agrumes (clémentine, etc.)</option>
+            <option value="chataigneraie">Châtaigneraie</option>
+            <option value="maraichage">Maraîchage</option>
+            <option value="prairie">Prairie</option>
+            <option value="parcours">Parcours / maquis</option>
+            <option value="fourrage">Fourrage</option>
+            <option value="legumineuses">Légumineuses</option>
+            <option value="autre">Autre</option>
+          </select>
+        </label>
+        <label>Surface (ha) <input type="number" id="parcelleSurface" step="0.01" min="0.01" required></label>
+        <label>Commune <input type="text" id="parcelleCommune"></label>
+        <div class="form-actions">
+          <button type="submit" id="parcelleSubmitBtn">Ajouter la parcelle</button>
+          <button type="button" id="parcelleCancelBtn" class="secondary hidden">Annuler</button>
+        </div>
+        <p class="error" id="parcelleError"></p>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Cheptel</h2>
+      <table id="cheptelsTable">
+        <thead>
+          <tr><th>Nom</th><th>Espèce</th><th>Effectif</th><th>Commune</th><th></th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <form id="cheptelForm">
+        <input type="hidden" id="cheptelId">
+        <label>Nom (ex: troupeau, lot) <input type="text" id="cheptelNom" required></label>
+        <label>Espèce
+          <select id="cheptelEspece" required>
+            <option value="bovin_viande">Bovin viande</option>
+            <option value="bovin_lait">Bovin lait</option>
+            <option value="ovin">Ovin (brebis)</option>
+            <option value="caprin">Caprin (chèvre)</option>
+            <option value="porcin">Porcin (porc corse)</option>
+            <option value="volaille">Volaille</option>
+            <option value="equin">Équin</option>
+            <option value="apiculture">Apiculture (ruches)</option>
+            <option value="autre">Autre</option>
+          </select>
+        </label>
+        <label>Effectif (têtes / ruches) <input type="number" id="cheptelEffectif" step="1" min="1" required></label>
+        <label>Commune <input type="text" id="cheptelCommune"></label>
+        <div class="form-actions">
+          <button type="submit" id="cheptelSubmitBtn">Ajouter au cheptel</button>
+          <button type="button" id="cheptelCancelBtn" class="secondary hidden">Annuler</button>
+        </div>
+        <p class="error" id="cheptelError"></p>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Estimation des aides</h2>
+      <p class="warning" id="aidesAvertissement"></p>
+      <div class="stats">
+        <div><span class="stat-value" id="statSurface">–</span><span class="stat-label">ha déclarés</span></div>
+        <div><span class="stat-value" id="statEffectif">–</span><span class="stat-label">têtes déclarées</span></div>
+        <div><span class="stat-value" id="statMontant">–</span><span class="stat-label">€ estimés</span></div>
+      </div>
+
+      <h3>Aides découplées (sur surface totale)</h3>
+      <table id="aidesDecoupleesTable">
+        <thead>
+          <tr><th>Paiement de base</th><th>Paiement redistributif</th><th>Écorégime</th><th>Sous-total</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td id="decouplBase">–</td>
+            <td id="decouplRedistributif">–</td>
+            <td id="decouplEcoregime">–</td>
+            <td id="decouplTotal">–</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Aides couplées par production (surfaces)</h3>
+      <table id="aidesParcellesTable">
+        <thead>
+          <tr><th>Parcelle</th><th>Culture</th><th>Surface (ha)</th><th>Taux (€/ha)</th><th>Montant (€)</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <h3>Aides couplées par production (cheptel)</h3>
+      <table id="aidesCheptelsTable">
+        <thead>
+          <tr><th>Cheptel</th><th>Espèce</th><th>Effectif</th><th>Taux (€/tête)</th><th>Montant (€)</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <div class="form-actions">
+        <button id="exportBtn">Exporter en CSV</button>
+        <button id="exportPdfBtn" class="secondary">Exporter en PDF</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
