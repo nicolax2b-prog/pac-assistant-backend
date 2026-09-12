@@ -172,3 +172,18 @@ td.actions button { padding: 0.3rem 0.6rem; font-size: 0.8rem; }
 .stat-label { display: block; font-size: 0.8rem; color: var(--muted); }
 
 .hidden { display: none !important; }
+
+.campagne-bar { display: flex; align-items: center; padding: 1rem 1.5rem; }
+
+.campagne-bar label { flex-direction: row; align-items: center; gap: 0.6rem; font-size: 0.9rem; color: var(--text); }
+
+.campagne-bar select { min-width: 160px; }
+
+.map-picker, .map-overview {
+  height: 260px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  margin-top: 0.3rem;
+}
+
+.hint { font-size: 0.8rem; color: var(--muted); margin: 0.3rem 0 0; }

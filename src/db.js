@@ -29,6 +29,9 @@ db.exec(`
     surface_ha REAL NOT NULL,
     commune TEXT,
     ilot TEXT,
+    campagne INTEGER NOT NULL DEFAULT 2026,
+    latitude REAL,
+    longitude REAL,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -39,6 +42,28 @@ db.exec(`
     espece TEXT NOT NULL,
     effectif INTEGER NOT NULL,
     commune TEXT,
+    campagne INTEGER NOT NULL DEFAULT 2026,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 `);
+
+// Migrations légères : ajoute les colonnes manquantes si la base existait déjà
+// sans elles (SQLite n'a pas d'ADD COLUMN IF NOT EXISTS, on vérifie via PRAGMA).
+const currentYear = new Date().getFullYear();
+const migrations = {
+  parcelles: [
+    { name: "campagne", ddl: `INTEGER NOT NULL DEFAULT ${currentYear}` },
+    { name: "latitude", ddl: "REAL" },
+    { name: "longitude", ddl: "REAL" },
+  ],
+  cheptels: [{ name: "campagne", ddl: `INTEGER NOT NULL DEFAULT ${currentYear}` }],
+};
+
+for (const [table, columnsToAdd] of Object.entries(migrations)) {
+  const existingColumns = db.prepare(`PRAGMA table_info(${table})`).all().map((col) => col.name);
+  for (const { name, ddl } of columnsToAdd) {
+    if (!existingColumns.includes(name)) {
+      db.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${ddl}`);
+    }
+  }
+}

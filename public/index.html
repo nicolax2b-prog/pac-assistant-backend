@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PAC Assistant</title>
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 </head>
 <body>
 <header>
@@ -39,6 +40,12 @@
   </section>
 
   <section id="appSection" class="hidden">
+    <div class="card campagne-bar">
+      <label>Campagne
+        <select id="campagneSelect"></select>
+      </label>
+    </div>
+
     <div class="card">
       <h2>Parcelles</h2>
       <table id="parcellesTable">
@@ -71,12 +78,23 @@
         </label>
         <label>Surface (ha) <input type="number" id="parcelleSurface" step="0.01" min="0.01" required></label>
         <label>Commune <input type="text" id="parcelleCommune"></label>
+        <label>Localisation (cliquez sur la carte pour placer la parcelle)
+          <div id="parcelleFormMap" class="map-picker"></div>
+        </label>
+        <input type="hidden" id="parcelleLatitude">
+        <input type="hidden" id="parcelleLongitude">
+        <p class="hint" id="parcelleLocationHint">Aucune position définie</p>
         <div class="form-actions">
           <button type="submit" id="parcelleSubmitBtn">Ajouter la parcelle</button>
           <button type="button" id="parcelleCancelBtn" class="secondary hidden">Annuler</button>
         </div>
         <p class="error" id="parcelleError"></p>
       </form>
+    </div>
+
+    <div class="card">
+      <h2>Carte des parcelles</h2>
+      <div id="parcellesOverviewMap" class="map-overview"></div>
     </div>
 
     <div class="card">
@@ -162,6 +180,7 @@
   </section>
 </main>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

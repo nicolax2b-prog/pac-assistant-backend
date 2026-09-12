@@ -71,7 +71,7 @@ function drawTable(doc, headers, rows, colWidths) {
   doc.moveDown(0.5);
 }
 
-export function genererRecapitulatifPdf(user, aidesEstimation) {
+export function genererRecapitulatifPdf(user, campagne, aidesEstimation) {
   const doc = new PDFDocument({ size: "A4", margin: MARGIN, bufferPages: true });
   const chunks = [];
   doc.on("data", (chunk) => chunks.push(chunk));
@@ -91,6 +91,7 @@ export function genererRecapitulatifPdf(user, aidesEstimation) {
   doc.fontSize(10).fillColor(COLORS.text);
   doc.text(`Exploitation : ${user.nom_exploitation || "—"}`);
   doc.text(`Email : ${user.email}`);
+  doc.text(`Campagne : ${campagne}`);
   doc.text(`Généré le : ${new Date().toLocaleString("fr-FR")}`);
 
   // Avertissement

@@ -7,11 +7,12 @@ function csvEscape(value) {
   return /[",\n;]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
 }
 
-export function genererRecapitulatifCsv(user, aidesEstimation) {
+export function genererRecapitulatifCsv(user, campagne, aidesEstimation) {
   const { aides_decouplees: ad } = aidesEstimation;
   const lignes = [
     ["Exploitation", user.nom_exploitation || ""],
     ["Email", user.email],
+    ["Campagne", campagne],
     ["Date export", new Date().toISOString()],
     [],
     ["Aides découplées (sur surface totale)", "Montant estimé (€)"],

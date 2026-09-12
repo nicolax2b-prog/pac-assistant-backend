@@ -1,4 +1,4 @@
-// Estimation des aides PAC (surfaces + cheptel) pour l'exploitant connecté
+// Estimation des aides PAC (surfaces + cheptel) pour l'exploitant connecté, par campagne
 
 import { Router } from "express";
 import { db } from "../db.js";
@@ -9,8 +9,13 @@ const router = Router();
 router.use(requireAuth);
 
 router.get("/aides/estimation", (req, res) => {
-  const parcelles = db.prepare("SELECT * FROM parcelles WHERE user_id = ?").all(req.userId);
-  const cheptels = db.prepare("SELECT * FROM cheptels WHERE user_id = ?").all(req.userId);
+  const campagne = parseInt(req.query.campagne, 10) || new Date().getFullYear();
+  const parcelles = db
+    .prepare("SELECT * FROM parcelles WHERE user_id = ? AND campagne = ?")
+    .all(req.userId, campagne);
+  const cheptels = db
+    .prepare("SELECT * FROM cheptels WHERE user_id = ? AND campagne = ?")
+    .all(req.userId, campagne);
 
   res.json(estimerAides(parcelles, cheptels));
 });

@@ -8,6 +8,7 @@ import healthRouter from "./routes/health.js";
 import authRouter from "./routes/auth.js";
 import parcellesRouter from "./routes/parcelles.js";
 import cheptelsRouter from "./routes/cheptels.js";
+import campagnesRouter from "./routes/campagnes.js";
 import aidesRouter from "./routes/aides.js";
 import declarationRouter from "./routes/declaration.js";
 
@@ -28,6 +29,7 @@ app.use("/", healthRouter);
 app.use("/", authRouter);
 app.use("/", parcellesRouter);
 app.use("/", cheptelsRouter);
+app.use("/", campagnesRouter);
 app.use("/", aidesRouter);
 app.use("/", declarationRouter);
 

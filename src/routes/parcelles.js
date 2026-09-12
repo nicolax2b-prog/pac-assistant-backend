@@ -1,4 +1,4 @@
-// CRUD des parcelles déclarées par l'exploitant
+// CRUD des parcelles déclarées par l'exploitant, par campagne
 
 import { Router } from "express";
 import { db } from "../db.js";
@@ -8,20 +8,26 @@ const router = Router();
 router.use(requireAuth);
 
 function validateParcelle(body) {
-  const { nom, culture, surface_ha } = body;
-  if (!nom || !culture || surface_ha === undefined) {
-    return "nom, culture et surface_ha sont requis";
+  const { nom, culture, surface_ha, campagne } = body;
+  if (!nom || !culture || surface_ha === undefined || !campagne) {
+    return "nom, culture, surface_ha et campagne sont requis";
   }
   if (typeof surface_ha !== "number" || surface_ha <= 0) {
     return "surface_ha doit être un nombre positif";
+  }
+  if (!Number.isInteger(campagne) || campagne < 2000 || campagne > 2100) {
+    return "campagne doit être une année valide";
   }
   return null;
 }
 
 router.get("/parcelles", (req, res) => {
-  const parcelles = db
-    .prepare("SELECT * FROM parcelles WHERE user_id = ? ORDER BY created_at DESC")
-    .all(req.userId);
+  const campagne = parseInt(req.query.campagne, 10);
+  const parcelles = campagne
+    ? db
+        .prepare("SELECT * FROM parcelles WHERE user_id = ? AND campagne = ? ORDER BY created_at DESC")
+        .all(req.userId, campagne)
+    : db.prepare("SELECT * FROM parcelles WHERE user_id = ? ORDER BY created_at DESC").all(req.userId);
   res.json(parcelles);
 });
 
@@ -37,12 +43,22 @@ router.post("/parcelles", (req, res) => {
   const error = validateParcelle(req.body);
   if (error) return res.status(400).json({ error });
 
-  const { nom, culture, surface_ha, commune, ilot } = req.body;
+  const { nom, culture, surface_ha, commune, ilot, campagne, latitude, longitude } = req.body;
   const { lastInsertRowid: id } = db
     .prepare(
-      "INSERT INTO parcelles (user_id, nom, culture, surface_ha, commune, ilot) VALUES (?, ?, ?, ?, ?, ?)"
+      "INSERT INTO parcelles (user_id, nom, culture, surface_ha, commune, ilot, campagne, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
-    .run(req.userId, nom, culture, surface_ha, commune || null, ilot || null);
+    .run(
+      req.userId,
+      nom,
+      culture,
+      surface_ha,
+      commune || null,
+      ilot || null,
+      campagne,
+      latitude ?? null,
+      longitude ?? null
+    );
 
   res.status(201).json(db.prepare("SELECT * FROM parcelles WHERE id = ?").get(id));
 });
@@ -56,10 +72,20 @@ router.put("/parcelles/:id", (req, res) => {
   const error = validateParcelle(req.body);
   if (error) return res.status(400).json({ error });
 
-  const { nom, culture, surface_ha, commune, ilot } = req.body;
+  const { nom, culture, surface_ha, commune, ilot, campagne, latitude, longitude } = req.body;
   db.prepare(
-    "UPDATE parcelles SET nom = ?, culture = ?, surface_ha = ?, commune = ?, ilot = ? WHERE id = ?"
-  ).run(nom, culture, surface_ha, commune || null, ilot || null, req.params.id);
+    "UPDATE parcelles SET nom = ?, culture = ?, surface_ha = ?, commune = ?, ilot = ?, campagne = ?, latitude = ?, longitude = ? WHERE id = ?"
+  ).run(
+    nom,
+    culture,
+    surface_ha,
+    commune || null,
+    ilot || null,
+    campagne,
+    latitude ?? null,
+    longitude ?? null,
+    req.params.id
+  );
 
   res.json(db.prepare("SELECT * FROM parcelles WHERE id = ?").get(req.params.id));
 });

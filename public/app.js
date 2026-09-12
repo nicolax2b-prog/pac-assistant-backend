@@ -27,10 +27,21 @@ const ESPECE_LABELS = {
   autre: "Autre",
 };
 
+const CORSE_CENTER = [42.15, 9.1];
+
 let token = localStorage.getItem("pac_token");
 let userEmail = localStorage.getItem("pac_email");
+let campagneActuelle = new Date().getFullYear();
+let mapsInitialized = false;
+let formMap, formMarker, overviewMap;
+let overviewMarkers = [];
 
 const $ = (id) => document.getElementById(id);
+
+function withCampagne(path) {
+  const sep = path.includes("?") ? "&" : "?";
+  return `${path}${sep}campagne=${campagneActuelle}`;
+}
 
 async function api(path, options = {}) {
   const res = await fetch(path, {
@@ -61,12 +72,104 @@ function clearSession() {
   localStorage.removeItem("pac_email");
 }
 
+function initMaps() {
+  if (mapsInitialized) return;
+  mapsInitialized = true;
+
+  formMap = L.map("parcelleFormMap", { scrollWheelZoom: false }).setView(CORSE_CENTER, 8);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "© OpenStreetMap",
+  }).addTo(formMap);
+  formMap.on("click", (e) => {
+    setParcelleLocation(e.latlng.lat, e.latlng.lng);
+  });
+
+  overviewMap = L.map("parcellesOverviewMap", { scrollWheelZoom: false }).setView(CORSE_CENTER, 8);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "© OpenStreetMap",
+  }).addTo(overviewMap);
+}
+
+function setParcelleLocation(lat, lng) {
+  $("parcelleLatitude").value = lat;
+  $("parcelleLongitude").value = lng;
+  $("parcelleLocationHint").textContent = `Position : ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+  if (formMarker) {
+    formMarker.setLatLng([lat, lng]);
+  } else {
+    formMarker = L.marker([lat, lng]).addTo(formMap);
+  }
+}
+
+function clearParcelleLocation() {
+  $("parcelleLatitude").value = "";
+  $("parcelleLongitude").value = "";
+  $("parcelleLocationHint").textContent = "Aucune position définie";
+  if (formMarker) {
+    formMap.removeLayer(formMarker);
+    formMarker = null;
+  }
+}
+
+function renderOverviewMap(parcelles) {
+  overviewMarkers.forEach((m) => overviewMap.removeLayer(m));
+  overviewMarkers = [];
+  for (const p of parcelles) {
+    if (p.latitude == null || p.longitude == null) continue;
+    const marker = L.marker([p.latitude, p.longitude])
+      .addTo(overviewMap)
+      .bindPopup(`<strong>${p.nom}</strong><br>${CULTURE_LABELS[p.culture] || p.culture} — ${p.surface_ha} ha`);
+    overviewMarkers.push(marker);
+  }
+}
+
+async function chargerCampagnes() {
+  const annees = await api("/campagnes");
+  const select = $("campagneSelect");
+  select.innerHTML = "";
+  for (const annee of annees) {
+    const opt = document.createElement("option");
+    opt.value = annee;
+    opt.textContent = annee;
+    select.appendChild(opt);
+  }
+  const nouvelleOpt = document.createElement("option");
+  nouvelleOpt.value = "__new__";
+  nouvelleOpt.textContent = "+ Nouvelle campagne...";
+  select.appendChild(nouvelleOpt);
+
+  if (!annees.includes(campagneActuelle)) campagneActuelle = annees[0];
+  select.value = campagneActuelle;
+}
+
+$("campagneSelect").addEventListener("change", (e) => {
+  if (e.target.value === "__new__") {
+    const annee = parseInt(prompt("Année de la nouvelle campagne (ex: 2027) :"), 10);
+    if (!annee || annee < 2000 || annee > 2100) {
+      e.target.value = campagneActuelle;
+      return;
+    }
+    const opt = document.createElement("option");
+    opt.value = annee;
+    opt.textContent = annee;
+    e.target.insertBefore(opt, e.target.querySelector('option[value="__new__"]'));
+    e.target.value = annee;
+  }
+  campagneActuelle = parseInt(e.target.value, 10);
+  refreshAll();
+});
+
 function showApp() {
   $("authSection").classList.add("hidden");
   $("appSection").classList.remove("hidden");
   $("userBar").classList.remove("hidden");
   $("userLabel").textContent = userEmail;
-  refreshAll();
+  initMaps();
+  setTimeout(() => {
+    formMap.invalidateSize();
+    overviewMap.invalidateSize();
+  }, 50);
+  chargerCampagnes().then(refreshAll);
 }
 
 function showAuth() {
@@ -130,6 +233,7 @@ function resetParcelleForm() {
   $("parcelleForm").reset();
   $("parcelleSubmitBtn").textContent = "Ajouter la parcelle";
   $("parcelleCancelBtn").classList.add("hidden");
+  clearParcelleLocation();
 }
 
 $("parcelleCancelBtn").addEventListener("click", resetParcelleForm);
@@ -138,11 +242,16 @@ $("parcelleForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   $("parcelleError").textContent = "";
   const id = $("parcelleId").value;
+  const lat = $("parcelleLatitude").value;
+  const lng = $("parcelleLongitude").value;
   const payload = {
     nom: $("parcelleNom").value,
     culture: $("parcelleCulture").value,
     surface_ha: parseFloat($("parcelleSurface").value),
     commune: $("parcelleCommune").value,
+    campagne: campagneActuelle,
+    latitude: lat ? parseFloat(lat) : null,
+    longitude: lng ? parseFloat(lng) : null,
   };
   try {
     await api(id ? `/parcelles/${id}` : "/parcelles", {
@@ -162,6 +271,12 @@ function editParcelle(p) {
   $("parcelleCulture").value = p.culture;
   $("parcelleSurface").value = p.surface_ha;
   $("parcelleCommune").value = p.commune || "";
+  if (p.latitude != null && p.longitude != null) {
+    setParcelleLocation(p.latitude, p.longitude);
+    formMap.setView([p.latitude, p.longitude], 12);
+  } else {
+    clearParcelleLocation();
+  }
   $("parcelleSubmitBtn").textContent = "Enregistrer les modifications";
   $("parcelleCancelBtn").classList.remove("hidden");
   $("parcelleNom").focus();
@@ -218,6 +333,7 @@ $("cheptelForm").addEventListener("submit", async (e) => {
     espece: $("cheptelEspece").value,
     effectif: parseInt($("cheptelEffectif").value, 10),
     commune: $("cheptelCommune").value,
+    campagne: campagneActuelle,
   };
   try {
     await api(id ? `/cheptels/${id}` : "/cheptels", {
@@ -319,13 +435,14 @@ function renderAides(estimation) {
 async function refreshAll() {
   try {
     const [parcelles, cheptels, aides] = await Promise.all([
-      api("/parcelles"),
-      api("/cheptels"),
-      api("/aides/estimation"),
+      api(withCampagne("/parcelles")),
+      api(withCampagne("/cheptels")),
+      api(withCampagne("/aides/estimation")),
     ]);
     renderParcelles(parcelles);
     renderCheptels(cheptels);
     renderAides(aides);
+    renderOverviewMap(parcelles);
   } catch (err) {
     if (err.message.includes("Token") || err.message.includes("Authentification")) {
       clearSession();
@@ -349,11 +466,11 @@ async function telechargerExport(path, filename) {
 }
 
 $("exportBtn").addEventListener("click", () =>
-  telechargerExport("/declaration/export", "recapitulatif-pac.csv")
+  telechargerExport(withCampagne("/declaration/export"), `recapitulatif-pac-${campagneActuelle}.csv`)
 );
 
 $("exportPdfBtn").addEventListener("click", () =>
-  telechargerExport("/declaration/export-pdf", "recapitulatif-pac.pdf")
+  telechargerExport(withCampagne("/declaration/export-pdf"), `recapitulatif-pac-${campagneActuelle}.pdf`)
 );
 
 if (token) showApp();
